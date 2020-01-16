@@ -45,6 +45,10 @@ class SiftWrapper(object):
         """Create OpenCV SIFT detector."""
         self.sift = cv2.xfeatures2d.SIFT_create(
             self.n_feature, self.n_octave_layers, self.peak_thld, self.edge_thld, self.sigma)
+    
+    def truncate_kp(self, cv_kpts):
+        cv_kpts = sorted(cv_kpts, key=lambda i: i.response)[-self.n_feature:]
+        return cv_kpts
 
     def detect(self, gray_img):
         """Detect keypoints in the gray-scale image.
@@ -56,14 +60,14 @@ class SiftWrapper(object):
         """
 
         cv_kpts = self.sift.detect(gray_img, None)
-
+        cv_kpts = self.truncate_kp(cv_kpts)
         all_octaves = [np.int8(i.octave & 0xFF) for i in cv_kpts]
         self.first_octave = int(np.min(all_octaves))
         self.max_octave = int(np.max(all_octaves))
 
         npy_kpts, cv_kpts = self.sample_by_octave(cv_kpts, self.n_sample, self.down_octave)
         return npy_kpts, cv_kpts
-
+    
     def compute(self, img, cv_kpts):
         """Compute SIFT descriptions on given keypoints.
         Args:
